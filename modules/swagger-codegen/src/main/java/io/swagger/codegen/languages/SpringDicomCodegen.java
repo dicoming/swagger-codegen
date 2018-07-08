@@ -11,4 +11,16 @@ public class SpringDicomCodegen extends SpringCodegen {
         embeddedTemplateDir = templateDir = "JavaSpring-DICOM";
         setLibrary(SPRING_CLOUD_LIBRARY);
     }
+
+    @Override
+    public String getName() {
+        return "spring-dicom";
+    }
+
+    @Override
+    public String getHelp() {
+        return "Generates a Java SpringBoot Server application using the SpringFox integration "
+                + "for DICOM Consulting company's internal projects.";
+    }
+
 }
