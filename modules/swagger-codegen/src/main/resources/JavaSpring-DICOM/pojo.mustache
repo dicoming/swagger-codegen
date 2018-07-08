@@ -5,12 +5,7 @@
 @Data
 @Builder
 @NoArgsConstructor
-{{>generatedAnnotation}}{{#discriminator}}{{>typeInfoAnnotation}}{{/discriminator}}{{>xmlAnnotation}}
-public class {{classname}}{{#parent}} extends {{{parent}}}{{/parent}}{{#serializableModel}} implements Serializable{{/serializableModel}} {
-{{#serializableModel}}
-  private static final long serialVersionUID = 1L;
-
-{{/serializableModel}}
+{{>generatedAnnotation}}{{#discriminator}}{{>typeInfoAnnotation}}{{/discriminator}}{{>xmlAnnotation}}public class {{classname}}{{#parent}} extends {{{parent}}}{{/parent}}{{#serializableModel}} implements Serializable{{/serializableModel}} {
   {{#vars}}
   {{#description}}/** {{{description}}} **/{{/description}}
       {{#isEnum}}
@@ -29,18 +24,13 @@ public class {{classname}}{{#parent}} extends {{{parent}}}{{/parent}}{{#serializ
   @JsonProperty("{{baseName}}"){{#withXml}}
   @JacksonXmlProperty({{#isXmlAttribute}}isAttribute = true, {{/isXmlAttribute}}{{#xmlNamespace}}namespace="{{xmlNamespace}}", {{/xmlNamespace}}localName = "{{#xmlName}}{{xmlName}}{{/xmlName}}{{^xmlName}}{{baseName}}{{/xmlName}}"){{/withXml}}
   {{/jackson}}
-  {{#gson}}
-  @SerializedName("{{baseName}}")
-  {{/gson}}
-  {{#isContainer}}
-  {{#useBeanValidation}}{{>beanValidation}}{{/useBeanValidation}}
+  {{#gson}}@SerializedName("{{baseName}}"){{/gson}}
+  {{#isContainer}} {{#useBeanValidation}}{{>beanValidation}}{{/useBeanValidation}}
   private {{{datatypeWithEnum}}} {{name}}{{#required}} = {{{defaultValue}}}{{/required}}{{^required}} = null{{/required}};
   {{/isContainer}}
-  {{^isContainer}}
-  {{#useBeanValidation}}{{>beanValidation}}{{/useBeanValidation}}
+  {{^isContainer}} {{#useBeanValidation}}{{>beanValidation}}{{/useBeanValidation}}
   private {{{datatypeWithEnum}}} {{name}} = {{{defaultValue}}};
   {{/isContainer}}
-
   {{/vars}}
   {{#vars}}
   {{#isListContainer}}
