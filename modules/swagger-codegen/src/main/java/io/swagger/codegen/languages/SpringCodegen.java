@@ -245,8 +245,8 @@ public class SpringCodegen extends AbstractJavaCodegen
                         ("src.main.resources").replace(".", java.io.File.separator), "swagger.properties"));
             }
             if (library.equals(SPRING_CLOUD_LIBRARY)) {
-                supportingFiles.add(new SupportingFile("apiKeyRequestInterceptor.mustache",
-                        (sourceFolder + File.separator + configPackage).replace(".", java.io.File.separator), "ApiKeyRequestInterceptor.java"));
+//                supportingFiles.add(new SupportingFile("apiKeyRequestInterceptor.mustache",
+//                        (sourceFolder + File.separator + configPackage).replace(".", java.io.File.separator), "ApiKeyRequestInterceptor.java"));
                 supportingFiles.add(new SupportingFile("clientConfiguration.mustache",
                         (sourceFolder + File.separator + configPackage).replace(".", java.io.File.separator), "ClientConfiguration.java"));
                 apiTemplateFiles.put("apiClient.mustache", "Client.java");
