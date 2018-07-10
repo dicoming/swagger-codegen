@@ -2,9 +2,10 @@
  * {{#description}}{{.}}{{/description}}{{^description}}{{classname}}{{/description}}
  */
 {{#useBeanValidation}}@Validated{{/useBeanValidation}}
-@Data
-@Builder
-@NoArgsConstructor
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode
 {{>generatedAnnotation}}{{#discriminator}}{{>typeInfoAnnotation}}{{/discriminator}}{{>xmlAnnotation}}public class {{classname}}{{#parent}} extends {{{parent}}}{{/parent}}{{#serializableModel}} implements Serializable{{/serializableModel}} {
   {{#vars}}
   {{#description}}/** {{{description}}} **/{{/description}}
@@ -59,5 +60,5 @@
   {{/isMapContainer}}
   {{/vars}}
 
-`
+
 }

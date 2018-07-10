@@ -5,7 +5,17 @@ import com.samskivert.mustache.Template;
 import io.swagger.codegen.ignore.CodegenIgnoreProcessor;
 import io.swagger.codegen.languages.AbstractJavaCodegen;
 import io.swagger.codegen.utils.ImplementationVersion;
-import io.swagger.models.*;
+import io.swagger.models.ComposedModel;
+import io.swagger.models.Contact;
+import io.swagger.models.Info;
+import io.swagger.models.License;
+import io.swagger.models.Model;
+import io.swagger.models.Operation;
+import io.swagger.models.Path;
+import io.swagger.models.RefModel;
+import io.swagger.models.SecurityRequirement;
+import io.swagger.models.Swagger;
+import io.swagger.models.Tag;
 import io.swagger.models.auth.OAuth2Definition;
 import io.swagger.models.auth.SecuritySchemeDefinition;
 import io.swagger.models.parameters.Parameter;
@@ -17,26 +27,63 @@ import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Reader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 public class DefaultGenerator extends AbstractGenerator implements Generator {
+
     protected final Logger LOGGER = LoggerFactory.getLogger(DefaultGenerator.class);
+
     protected CodegenConfig config;
+
     protected ClientOptInput opts;
+
     protected Swagger swagger;
+
     protected CodegenIgnoreProcessor ignoreProcessor;
+
     private Boolean generateApis = null;
+
     private Boolean generateModels = null;
+
     private Boolean generateSupportingFiles = null;
+
     private Boolean generateApiTests = null;
+
     private Boolean generateApiDocumentation = null;
+
     private Boolean generateModelTests = null;
+
     private Boolean generateModelDocumentation = null;
+
     private Boolean generateSwaggerMetadata = true;
+
     private String basePath;
+
     private String basePathWithoutHost;
+
+    private String basePathWithoutHostAndSlash;
+
     private String contextPath;
+
     private Map<String, String> generatorPropertyDefaults = new HashMap<>();
 
     @Override
@@ -52,7 +99,9 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
             if (ignoreFile.exists() && ignoreFile.canRead()) {
                 this.ignoreProcessor = new CodegenIgnoreProcessor(ignoreFile);
             } else {
-                LOGGER.warn("Ignore file specified at {} is not valid. This will fall back to an existing ignore file if present in the output directory.", ignoreFileLocation);
+                LOGGER.warn(
+                        "Ignore file specified at {} is not valid. This will fall back to an existing ignore file if present in the output directory.",
+                        ignoreFileLocation);
             }
         }
 
@@ -66,6 +115,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
     /**
      * Programmatically disable the output of .swagger-codegen/VERSION, .swagger-codegen-ignore,
      * or other metadata files used by Swagger Codegen.
+     *
      * @param generateSwaggerMetadata true: enable outputs, false: disable outputs
      */
     @SuppressWarnings("WeakerAccess")
@@ -76,7 +126,8 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
     /**
      * Set generator properties otherwise pulled from system properties.
      * Useful for running tests in parallel without relying on System.properties.
-     * @param key The system property key
+     *
+     * @param key   The system property key
      * @param value The system property value
      */
     @SuppressWarnings("WeakerAccess")
@@ -125,9 +176,12 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
     private void configureGeneratorProperties() {
         // allows generating only models by specifying a CSV of models to generate, or empty for all
         // NOTE: Boolean.TRUE is required below rather than `true` because of JVM boxing constraints and type inference.
-        generateApis = System.getProperty(CodegenConstants.APIS) != null ? Boolean.TRUE : getGeneratorPropertyDefaultSwitch(CodegenConstants.APIS, null);
-        generateModels = System.getProperty(CodegenConstants.MODELS) != null ? Boolean.TRUE : getGeneratorPropertyDefaultSwitch(CodegenConstants.MODELS, null);
-        generateSupportingFiles = System.getProperty(CodegenConstants.SUPPORTING_FILES) != null ? Boolean.TRUE : getGeneratorPropertyDefaultSwitch(CodegenConstants.SUPPORTING_FILES, null);
+        generateApis = System.getProperty(CodegenConstants.APIS) != null ? Boolean.TRUE :
+                getGeneratorPropertyDefaultSwitch(CodegenConstants.APIS, null);
+        generateModels = System.getProperty(CodegenConstants.MODELS) != null ? Boolean.TRUE :
+                getGeneratorPropertyDefaultSwitch(CodegenConstants.MODELS, null);
+        generateSupportingFiles = System.getProperty(CodegenConstants.SUPPORTING_FILES) != null ? Boolean.TRUE :
+                getGeneratorPropertyDefaultSwitch(CodegenConstants.SUPPORTING_FILES, null);
 
         if (generateApis == null && generateModels == null && generateSupportingFiles == null) {
             // no specifics are set, generate everything
@@ -145,11 +199,18 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         }
         // model/api tests and documentation options rely on parent generate options (api or model) and no other options.
         // They default to true in all scenarios and can only be marked false explicitly
-        generateModelTests = System.getProperty(CodegenConstants.MODEL_TESTS) != null ? Boolean.valueOf(System.getProperty(CodegenConstants.MODEL_TESTS)) : getGeneratorPropertyDefaultSwitch(CodegenConstants.MODEL_TESTS, true);
-        generateModelDocumentation = System.getProperty(CodegenConstants.MODEL_DOCS) != null ? Boolean.valueOf(System.getProperty(CodegenConstants.MODEL_DOCS)) : getGeneratorPropertyDefaultSwitch(CodegenConstants.MODEL_DOCS, true);
-        generateApiTests = System.getProperty(CodegenConstants.API_TESTS) != null ? Boolean.valueOf(System.getProperty(CodegenConstants.API_TESTS)) : getGeneratorPropertyDefaultSwitch(CodegenConstants.API_TESTS, true);
-        generateApiDocumentation = System.getProperty(CodegenConstants.API_DOCS) != null ? Boolean.valueOf(System.getProperty(CodegenConstants.API_DOCS)) : getGeneratorPropertyDefaultSwitch(CodegenConstants.API_DOCS, true);
-
+        generateModelTests = System.getProperty(CodegenConstants.MODEL_TESTS) != null ?
+                Boolean.valueOf(System.getProperty(CodegenConstants.MODEL_TESTS)) :
+                getGeneratorPropertyDefaultSwitch(CodegenConstants.MODEL_TESTS, true);
+        generateModelDocumentation = System.getProperty(CodegenConstants.MODEL_DOCS) != null ?
+                Boolean.valueOf(System.getProperty(CodegenConstants.MODEL_DOCS)) :
+                getGeneratorPropertyDefaultSwitch(CodegenConstants.MODEL_DOCS, true);
+        generateApiTests = System.getProperty(CodegenConstants.API_TESTS) != null ?
+                Boolean.valueOf(System.getProperty(CodegenConstants.API_TESTS)) :
+                getGeneratorPropertyDefaultSwitch(CodegenConstants.API_TESTS, true);
+        generateApiDocumentation = System.getProperty(CodegenConstants.API_DOCS) != null ?
+                Boolean.valueOf(System.getProperty(CodegenConstants.API_DOCS)) :
+                getGeneratorPropertyDefaultSwitch(CodegenConstants.API_DOCS, true);
 
         // Additional properties added for tests to exclude references in project related files
         config.additionalProperties().put(CodegenConstants.GENERATE_API_TESTS, generateApiTests);
@@ -181,6 +242,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         contextPath = config.escapeText(swagger.getBasePath() == null ? "" : swagger.getBasePath());
         basePath = config.escapeText(getHost());
         basePathWithoutHost = config.escapeText(swagger.getBasePath());
+        basePathWithoutHostAndSlash = basePathWithoutHost.replace("/", "");
 
     }
 
@@ -202,8 +264,9 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         if (StringUtils.isEmpty(info.getDescription())) {
             // set a default description if none if provided
             config.additionalProperties().put("appDescription",
-                    "No description provided (generated by Swagger Codegen https://github.com/swagger-api/swagger-codegen)");
-            config.additionalProperties().put("unescapedAppDescription", "No description provided (generated by Swagger Codegen https://github.com/swagger-api/swagger-codegen)");
+                                              "No description provided (generated by Swagger Codegen https://github.com/swagger-api/swagger-codegen)");
+            config.additionalProperties().put("unescapedAppDescription",
+                                              "No description provided (generated by Swagger Codegen https://github.com/swagger-api/swagger-codegen)");
         } else {
             config.additionalProperties().put("appDescription", config.escapeText(info.getDescription()));
             config.additionalProperties().put("unescapedAppDescription", info.getDescription());
@@ -248,7 +311,8 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         // to generate model test files
         for (String templateName : config.modelTestTemplateFiles().keySet()) {
             String suffix = config.modelTestTemplateFiles().get(templateName);
-            String filename = config.modelTestFileFolder() + File.separator + config.toModelTestFilename(modelName) + suffix;
+            String filename =
+                    config.modelTestFileFolder() + File.separator + config.toModelTestFilename(modelName) + suffix;
             // do not overwrite test file that already exists
             if (new File(filename).exists()) {
                 LOGGER.info("File exists. Skipped overwriting " + filename);
@@ -261,10 +325,12 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         }
     }
 
-    private void generateModelDocumentation(List<File> files, Map<String, Object> models, String modelName) throws IOException {
+    private void generateModelDocumentation(List<File> files, Map<String, Object> models, String modelName)
+            throws IOException {
         for (String templateName : config.modelDocTemplateFiles().keySet()) {
             String suffix = config.modelDocTemplateFiles().get(templateName);
-            String filename = config.modelDocFileFolder() + File.separator + config.toModelDocFilename(modelName) + suffix;
+            String filename =
+                    config.modelDocFileFolder() + File.separator + config.toModelDocFilename(modelName) + suffix;
             if (!config.shouldOverwrite(filename)) {
                 LOGGER.info("Skipped overwriting " + filename);
                 continue;
@@ -306,6 +372,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
 
         // store all processed models
         Map<String, Object> allProcessedModels = new TreeMap<String, Object>(new Comparator<String>() {
+
             @Override
             public int compare(String o1, String o2) {
                 Model model1 = definitions.get(o1);
@@ -371,7 +438,8 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                 models.putAll(config.additionalProperties());
                 allProcessedModels.put(name, models);
             } catch (Exception e) {
-                throw new RuntimeException("Could not process model '" + name + "'" + ".Please make sure that your schema is correct!", e);
+                throw new RuntimeException(
+                        "Could not process model '" + name + "'" + ".Please make sure that your schema is correct!", e);
             }
         }
 
@@ -400,7 +468,8 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                 allModels.add(modelTemplate);
                 for (String templateName : config.modelTemplateFiles().keySet()) {
                     String suffix = config.modelTemplateFiles().get(templateName);
-                    String filename = config.modelFileFolder() + File.separator + config.toModelFilename(modelName) + suffix;
+                    String filename =
+                            config.modelFileFolder() + File.separator + config.toModelFilename(modelName) + suffix;
                     if (!config.shouldOverwrite(filename)) {
                         LOGGER.info("Skipped overwriting " + filename);
                         continue;
@@ -451,6 +520,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
             try {
                 List<CodegenOperation> ops = paths.get(tag);
                 Collections.sort(ops, new Comparator<CodegenOperation>() {
+
                     @Override
                     public int compare(CodegenOperation one, CodegenOperation another) {
                         return ObjectUtils.compare(one.operationId, another.operationId);
@@ -460,6 +530,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
 
                 operation.put("basePath", basePath);
                 operation.put("basePathWithoutHost", basePathWithoutHost);
+                operation.put("basePathWithoutHostAndSlash", basePathWithoutHostAndSlash);
                 operation.put("contextPath", contextPath);
                 operation.put("baseName", tag);
                 operation.put("apiPackage", config.apiPackage());
@@ -477,7 +548,9 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                 // Pass sortParamsByRequiredFlag through to the Mustache template...
                 boolean sortParamsByRequiredFlag = true;
                 if (this.config.additionalProperties().containsKey(CodegenConstants.SORT_PARAMS_BY_REQUIRED_FLAG)) {
-                    sortParamsByRequiredFlag = Boolean.valueOf(this.config.additionalProperties().get(CodegenConstants.SORT_PARAMS_BY_REQUIRED_FLAG).toString());
+                    sortParamsByRequiredFlag = Boolean.valueOf(
+                            this.config.additionalProperties().get(CodegenConstants.SORT_PARAMS_BY_REQUIRED_FLAG)
+                                       .toString());
                 }
                 operation.put("sortParamsByRequiredFlag", sortParamsByRequiredFlag);
 
@@ -521,7 +594,6 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                         }
                     }
                 }
-
 
                 if (generateApiDocumentation) {
                     // to generate api documentation files
@@ -570,7 +642,8 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                 if (!of.isDirectory()) {
                     of.mkdirs();
                 }
-                String outputFilename = outputFolder + File.separator + support.destinationFilename.replace('/', File.separatorChar);
+                String outputFilename =
+                        outputFolder + File.separator + support.destinationFilename.replace('/', File.separatorChar);
                 if (!config.shouldOverwrite(outputFilename)) {
                     LOGGER.info("Skipped overwriting " + outputFilename);
                     continue;
@@ -596,6 +669,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                         compiler = config.processCompiler(compiler);
                         Template tmpl = compiler
                                 .withLoader(new Mustache.TemplateLoader() {
+
                                     @Override
                                     public Reader getTemplate(String name) {
                                         return getTemplateReader(getFullTemplateFile(config, name + ".mustache"));
@@ -642,7 +716,8 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         String ignoreFileNameTarget = config.outputFolder() + File.separator + swaggerCodegenIgnore;
         File ignoreFile = new File(ignoreFileNameTarget);
         if (generateSwaggerMetadata && !ignoreFile.exists()) {
-            String ignoreFileNameSource = File.separator + config.getCommonTemplateDir() + File.separator + swaggerCodegenIgnore;
+            String ignoreFileNameSource =
+                    File.separator + config.getCommonTemplateDir() + File.separator + swaggerCodegenIgnore;
             String ignoreFileContents = readResourceContents(ignoreFileNameSource);
             try {
                 writeToFile(ignoreFileNameTarget, ignoreFileContents);
@@ -652,8 +727,9 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
             files.add(ignoreFile);
         }
 
-        if(generateSwaggerMetadata) {
-            final String swaggerVersionMetadata = config.outputFolder() + File.separator + ".swagger-codegen" + File.separator + "VERSION";
+        if (generateSwaggerMetadata) {
+            final String swaggerVersionMetadata =
+                    config.outputFolder() + File.separator + ".swagger-codegen" + File.separator + "VERSION";
             File swaggerVersionMetadataFile = new File(swaggerVersionMetadata);
             try {
                 writeToFile(swaggerVersionMetadata, ImplementationVersion.read());
@@ -756,8 +832,8 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         return files;
     }
 
-
-    private File processTemplateToFile(Map<String, Object> templateData, String templateName, String outputFilename) throws IOException {
+    private File processTemplateToFile(Map<String, Object> templateData, String templateName, String outputFilename)
+            throws IOException {
         String adjustedOutputFilename = outputFilename.replaceAll("//", "/").replace('/', File.separatorChar);
         if (ignoreProcessor.allowsFile(new File(adjustedOutputFilename))) {
             String templateFile = getFullTemplateFile(config, templateName);
@@ -766,6 +842,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
             compiler = config.processCompiler(compiler);
             Template tmpl = compiler
                     .withLoader(new Mustache.TemplateLoader() {
+
                         @Override
                         public Reader getTemplate(String name) {
                             return getTemplateReader(getFullTemplateFile(config, name + ".mustache"));
@@ -820,12 +897,14 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         return ops;
     }
 
-    private void processOperation(String resourcePath, String httpMethod, Operation operation, Map<String, List<CodegenOperation>> operations, Path path) {
+    private void processOperation(String resourcePath, String httpMethod, Operation operation,
+                                  Map<String, List<CodegenOperation>> operations, Path path) {
         if (operation == null) {
             return;
         }
         if (System.getProperty("debugOperations") != null) {
-            LOGGER.info("processOperation: resourcePath= " + resourcePath + "\t;" + httpMethod + " " + operation + "\n");
+            LOGGER.info(
+                    "processOperation: resourcePath= " + resourcePath + "\t;" + httpMethod + " " + operation + "\n");
         }
         List<Tag> tags = new ArrayList<Tag>();
 
@@ -882,9 +961,11 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
 
         for (Tag tag : tags) {
             try {
-                CodegenOperation codegenOperation = config.fromOperation(resourcePath, httpMethod, operation, swagger.getDefinitions(), swagger);
+                CodegenOperation codegenOperation =
+                        config.fromOperation(resourcePath, httpMethod, operation, swagger.getDefinitions(), swagger);
                 codegenOperation.tags = new ArrayList<Tag>(tags);
-                config.addOperationToGroup(config.sanitizeTag(tag.getName()), resourcePath, operation, codegenOperation, operations);
+                config.addOperationToGroup(config.sanitizeTag(tag.getName()), resourcePath, operation, codegenOperation,
+                                           operations);
 
                 List<Map<String, List<String>>> securities = operation.getSecurity();
                 if (securities == null && swagger.getSecurity() != null) {
@@ -899,7 +980,8 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                 Map<String, SecuritySchemeDefinition> authMethods = new HashMap<String, SecuritySchemeDefinition>();
                 for (Map<String, List<String>> security : securities) {
                     for (String securityName : security.keySet()) {
-                        SecuritySchemeDefinition securityDefinition = swagger.getSecurityDefinitions().get(securityName);
+                        SecuritySchemeDefinition securityDefinition =
+                                swagger.getSecurityDefinitions().get(securityName);
                         if (securityDefinition == null) {
                             continue;
                         }
@@ -943,8 +1025,8 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         return parameter.getName() + ":" + parameter.getIn();
     }
 
-
-    private Map<String, Object> processOperations(CodegenConfig config, String tag, List<CodegenOperation> ops, List<Object> allModels) {
+    private Map<String, Object> processOperations(CodegenConfig config, String tag, List<CodegenOperation> ops,
+                                                  List<Object> allModels) {
         Map<String, Object> operations = new HashMap<String, Object>();
         Map<String, Object> objs = new HashMap<String, Object>();
         objs.put("classname", config.toApiName(tag));
@@ -965,7 +1047,6 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
 
         operations.put("operations", objs);
         operations.put("package", config.apiPackage());
-
 
         Set<String> allImports = new TreeSet<String>();
         for (CodegenOperation op : ops) {
@@ -1006,8 +1087,8 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         return operations;
     }
 
-
-    private Map<String, Object> processModels(CodegenConfig config, Map<String, Model> definitions, Map<String, Model> allDefinitions) {
+    private Map<String, Object> processModels(CodegenConfig config, Map<String, Model> definitions,
+                                              Map<String, Model> allDefinitions) {
         Map<String, Object> objs = new HashMap<String, Object>();
         objs.put("package", config.modelPackage());
         List<Object> models = new ArrayList<Object>();
